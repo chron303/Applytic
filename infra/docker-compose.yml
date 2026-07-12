@@ -5,6 +5,8 @@ services:
       - "3000:3000"
     depends_on:
       - postgres
+    env_file:
+      - ../ms1-core-api/.env
 
   ms2:
     build: ../ms2-match-agent

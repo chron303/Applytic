@@ -9,18 +9,24 @@ from here, rather than creating its own client.
 """
 
 from google import genai
-from config import GEMINI_API_KEY, GEMINI_MODEL
-_client = genai.Client(api_key=GEMINI_API_KEY)
+
+from config import GEMINI_MODEL, require_gemini_api_key
+
+_client: genai.Client | None = None
+
 
 def get_gemini_client() -> genai.Client:
     """
     Returns the shared Gemini client instance.
 
-    Exists so other modules (e.g. a future resume_parser.py) depend on
-    this one function instead of importing the private `_client`
-    variable directly or constructing their own client. That's the
-    seam future code should plug into.
+    Creates the client lazily on first use so importing this module
+    doesn't require GEMINI_API_KEY to already be configured.
     """
+    global _client
+
+    if _client is None:
+        _client = genai.Client(api_key=require_gemini_api_key())
+
     return _client
 
 
@@ -34,11 +40,16 @@ def test_gemini() -> None:
     intentional, per the task scope.
     """
     print("Using Gemini model:", GEMINI_MODEL)
-    response = _client.models.generate_content(
+
+    client = get_gemini_client()
+
+    response = client.models.generate_content(
         model=GEMINI_MODEL,
         contents="Hello Gemini",
     )
+
     print(response.text)
+
 
 if __name__ == "__main__":
     test_gemini()

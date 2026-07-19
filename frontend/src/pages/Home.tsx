@@ -1,40 +1,62 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import ResumeUpload from "../components/ResumeUpload";
-import JobDescription from "../components/JobDescription";
-import ResultCard from "../components/ResultCard";
 import { Card, CardHeader } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { uploadResume } from "../api/resume";
-import type { ResumeResponse } from "../types/resume";
+import { matchProfile } from "../api/matches";
+import { getProfile } from "../api/profiles";
 
 function Home() {
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
-  const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<ResumeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleAnalyze() {
-    if (!file) {
-      setError("Please upload a resume PDF before analyzing.");
-      return;
+  const [profile, setProfile] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [showUpload, setShowUpload] = useState(false);
+
+  useEffect(() => {
+    async function loadProfile() {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        setLoadingProfile(false);
+        return;
+      }
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const userId = payload.userId || payload.sub; // Handle different token structures just in case
+        if (userId) {
+          const data = await getProfile(userId);
+          setProfile(data);
+        }
+      } catch (err) {
+        // Assume no profile or error fetching
+      } finally {
+        setLoadingProfile(false);
+      }
     }
-    if (!jobDescription.trim()) {
-      setError("Please enter a job description before analyzing.");
+    loadProfile();
+  }, []);
+
+  async function handleAnalyze() {
+    if (!file && !profile) {
+      setError("Please upload a resume PDF before analyzing.");
       return;
     }
 
     setError(null);
-    setResult(null);
 
     try {
       setLoading(true);
-      const response = await uploadResume(file, jobDescription);
-      setResult(response);
-      // Scroll to results
-      setTimeout(() => {
-        document.getElementById("results-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
+      if (file) {
+        const newProfile = await uploadResume(file);
+        await matchProfile(newProfile.user_id, newProfile.parsed_data);
+      } else if (profile) {
+        await matchProfile(profile.user_id, profile.parsed_data);
+      }
+      navigate("/matches");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError("Analysis failed: " + msg);
@@ -45,13 +67,11 @@ function Home() {
 
   function handleReset() {
     setFile(null);
-    setJobDescription("");
-    setResult(null);
     setError(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  const canAnalyze = !!file && jobDescription.trim().length > 0;
+  const canAnalyze = !!file || !!profile;
 
   return (
     <main className="home-page">
@@ -62,14 +82,12 @@ function Home() {
           <div>
             <h1 className="home-title">Resume Intelligence</h1>
             <p className="home-subtitle">
-              Upload a resume and job description to get an AI-powered match analysis instantly.
+              Upload your resume to instantly match against all active job postings.
             </p>
           </div>
-          {result && (
-            <Button variant="ghost" size="sm" onClick={handleReset}>
-              New analysis
-            </Button>
-          )}
+          <Button variant="ghost" size="sm" onClick={handleReset}>
+            Reset
+          </Button>
         </div>
 
         {/* ── Dashboard grid ── */}
@@ -78,8 +96,8 @@ function Home() {
           {/* Card 1 — Resume Upload */}
           <Card padding="md">
             <CardHeader
-              title="Resume"
-              subtitle="Upload the candidate's resume in PDF format"
+              title={profile && !showUpload ? "Current Profile" : profile && showUpload ? "Update Resume" : "Upload Resume"}
+              subtitle={profile && !showUpload ? "Your saved profile details" : "Upload the candidate's resume in PDF format"}
               icon={
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -87,30 +105,27 @@ function Home() {
                 </svg>
               }
             />
-            <ResumeUpload file={file} setFile={setFile} />
+            {loadingProfile ? (
+              <p style={{ color: "var(--color-text-muted)" }}>Loading profile...</p>
+            ) : profile && !showUpload ? (
+              <div className="profile-summary">
+                <p style={{ marginBottom: "0.5rem" }}><strong>Name:</strong> {profile.parsed_data?.name || "Unknown"}</p>
+                <p style={{ marginBottom: "0.5rem" }}><strong>Top Skills:</strong> {profile.parsed_data?.skills?.slice(0, 5).join(", ") || "None"}</p>
+                <p style={{ marginBottom: "1.5rem" }}><strong>Resume last updated:</strong> {new Date(profile.updated_at || profile.created_at).toLocaleDateString()}</p>
+                <Button onClick={() => setShowUpload(true)} variant="ghost">
+                  Update Resume
+                </Button>
+              </div>
+            ) : (
+              <ResumeUpload file={file} setFile={setFile} />
+            )}
           </Card>
 
-          {/* Card 2 — Job Description */}
+          {/* Card 2 — Analyze */}
           <Card padding="md">
             <CardHeader
-              title="Job Description"
-              subtitle="Paste the full job posting to match against"
-              icon={
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <line x1="3" y1="9" x2="21" y2="9" />
-                  <line x1="9" y1="21" x2="9" y2="9" />
-                </svg>
-              }
-            />
-            <JobDescription value={jobDescription} onChange={setJobDescription} />
-          </Card>
-
-          {/* Card 3 — Analyze */}
-          <Card padding="md">
-            <CardHeader
-              title="Analyze"
-              subtitle="Run the AI-powered matching engine"
+              title="Analyze & Match"
+              subtitle="Run the AI-powered matching engine against all jobs"
               icon={
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8" />
@@ -122,8 +137,8 @@ function Home() {
             <div className="home-analyze-body">
               {/* Checklist */}
               <div className="home-checklist">
-                <div className={`home-check-item ${file ? "home-check--done" : ""}`}>
-                  {file ? (
+                <div className={`home-check-item ${(file || profile) ? "home-check--done" : ""}`}>
+                  {(file || profile) ? (
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                       <circle cx="8" cy="8" r="7" fill="var(--color-success)" />
                       <path d="M5 8l2.5 2.5L11 5.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -131,18 +146,7 @@ function Home() {
                   ) : (
                     <div className="home-check-circle" aria-hidden="true" />
                   )}
-                  <span>Resume uploaded</span>
-                </div>
-                <div className={`home-check-item ${jobDescription.trim() ? "home-check--done" : ""}`}>
-                  {jobDescription.trim() ? (
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="8" r="7" fill="var(--color-success)" />
-                      <path d="M5 8l2.5 2.5L11 5.5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  ) : (
-                    <div className="home-check-circle" aria-hidden="true" />
-                  )}
-                  <span>Job description entered</span>
+                  <span>{profile && !file ? "Saved profile active" : "Resume uploaded"}</span>
                 </div>
               </div>
 
@@ -163,7 +167,7 @@ function Home() {
                 disabled={!canAnalyze}
                 onClick={handleAnalyze}
               >
-                {loading ? "Analyzing resume…" : "Analyze resume"}
+                {loading ? "Matching profile…" : "Find Matches"}
               </Button>
 
               <p className="home-analyze-note">
@@ -171,22 +175,6 @@ function Home() {
               </p>
             </div>
           </Card>
-
-          {/* Card 4 — Results (only shown after analysis) */}
-          {result && (
-            <Card padding="md" id="results-card">
-              <CardHeader
-                title="Analysis Results"
-                subtitle={`Match score: ${result.match_score}% · ${result.matched_skills.length} matched · ${result.missing_skills.length} missing`}
-                icon={
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                  </svg>
-                }
-              />
-              <ResultCard result={result} />
-            </Card>
-          )}
 
         </div>
       </div>

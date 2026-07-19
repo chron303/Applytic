@@ -2,24 +2,27 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Navbar } from "./components/Navbar";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
+import Matches from "./pages/Matches";
+import ReviewQueue from "./pages/ReviewQueue";
+import ApplicationStatus from "./pages/ApplicationStatus";
 import "./App.css";
 
-function AppLayout() {
+function AppLayout({ children }: { children?: React.ReactNode }) {
   const email = localStorage.getItem("accessToken")
     ? (() => {
-        try {
-          const payload = JSON.parse(atob(localStorage.getItem("accessToken")!.split(".")[1]));
-          return payload.email ?? null;
-        } catch {
-          return null;
-        }
-      })()
+      try {
+        const payload = JSON.parse(atob(localStorage.getItem("accessToken")!.split(".")[1]));
+        return payload.userId ?? payload.email ?? null;
+      } catch {
+        return null;
+      }
+    })()
     : null;
 
   return (
     <>
       <Navbar userEmail={email} />
-      <Home />
+      {children ? children : <Home />}
     </>
   );
 }
@@ -30,6 +33,9 @@ function App() {
       <Routes>
         <Route path="/" element={<AppLayout />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/matches" element={<AppLayout><Matches /></AppLayout>} />
+        <Route path="/review" element={<AppLayout><ReviewQueue /></AppLayout>} />
+        <Route path="/application-status" element={<AppLayout><ApplicationStatus /></AppLayout>} />
       </Routes>
     </BrowserRouter>
   );

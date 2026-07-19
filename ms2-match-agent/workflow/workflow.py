@@ -1,21 +1,28 @@
 """
 workflow/workflow.py
 
-Assembles the four existing Resume Matching Agent nodes — resume
-parsing, job description parsing, skill matching, and recommendation
-generation — into a single compiled LangGraph StateGraph.
+Three compiled LangGraph graphs live here:
 
-This module contains no business logic of its own. It does not parse
-resumes, does not call any AI model, does not compute a match score,
-and does not generate advice. Every one of those behaviors already
-exists in its own node module (nodes/gemini_resume_parser.py,
-nodes/job_parser.py, nodes/skill_matcher.py,
-nodes/recommendation_generator.py) and is imported here unchanged.
-workflow.py's only responsibility is describing the order those four
-nodes run in and compiling that description into an executable graph.
+1. get_resume_workflow()
+   Original straight-line pipeline:
+     START -> parse_resume -> parse_job -> match_skills
+           -> generate_recommendations -> END
+   Kept unchanged for backward-compat with POST /parse-resume.
 
-Public API:
-    get_resume_workflow() -> the compiled graph, ready to `.invoke()`.
+2. get_match_workflow()
+   New per-posting pipeline:
+     START -> run_rules_engine -> run_match_explainer -> END
+   This is the graph /match-profile invokes once per active posting.
+   The orchestration (looping over all postings, writing results back
+   to MS1) lives in resume_routes.py, not here — this graph is
+   stateless and reusable.
+
+3. get_drafting_workflow()
+   On-demand drafting pipeline:
+     START -> run_drafting_worker -> END
+   ONLY invoked explicitly via POST /draft-application when the user
+   approves a specific 'apply' match for form drafting. Never run
+   automatically during the match sweep.
 """
 
 import logging
@@ -23,43 +30,31 @@ import logging
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from nodes.drafting_worker import run_drafting_worker
 from nodes.gemini_resume_parser import parse_resume
 from nodes.job_parser import parse_job
+from nodes.match_explainer import run_match_explainer
 from nodes.recommendation_generator import generate_recommendations
+from nodes.rules_engine import run_rules_engine
 from nodes.skill_matcher import match_skills
-from state.resume_state import ResumeState
+from state.resume_state import DraftingState, MatchState, ResumeState
 
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Original workflow (unchanged)
+# ---------------------------------------------------------------------------
+
 def get_resume_workflow() -> CompiledStateGraph:
     """
-    Builds and compiles the Resume Matching Agent's LangGraph workflow.
+    Builds and compiles the original Resume Matching Agent's LangGraph workflow.
 
-    The graph is a single straight-line pipeline with no branching:
-
+    Graph:
         START -> parse_resume -> parse_job ->
         match_skills -> generate_recommendations -> END
-
-    Each stage depends on the output of the one before it — skill
-    matching needs both a parsed resume and a parsed job description
-    already sitting in state, and recommendations need the matching
-    results — so there is no point in this workflow where the graph
-    needs to choose between more than one possible next step. That is
-    exactly why this function uses only add_edge() (unconditional,
-    one-to-one transitions) and never add_conditional_edges(): a
-    conditional edge exists to let the graph choose its next node
-    based on the current state, which this pipeline has no need to
-    do.
-
-    Returns:
-        CompiledStateGraph: the compiled graph. Callers invoke the
-        pipeline by calling `.invoke(initial_state)` on the returned
-        object, where initial_state is a ResumeState with at least
-        the fields the first node (parse_resume) depends on already
-        populated.
     """
-    logger.info("Building Resume Matching Agent workflow graph")
+    logger.info("Building original resume workflow graph")
 
     graph_builder: StateGraph = StateGraph(ResumeState)
 
@@ -68,22 +63,78 @@ def get_resume_workflow() -> CompiledStateGraph:
     graph_builder.add_node("match_skills", match_skills)
     graph_builder.add_node("generate_recommendations", generate_recommendations)
 
-    logger.debug("Registered 4 nodes: parse_resume, parse_job, "
-                 "match_skills, generate_recommendations")
-
     graph_builder.add_edge(START, "parse_resume")
     graph_builder.add_edge("parse_resume", "parse_job")
     graph_builder.add_edge("parse_job", "match_skills")
     graph_builder.add_edge("match_skills", "generate_recommendations")
     graph_builder.add_edge("generate_recommendations", END)
 
-    logger.debug(
-        "Wired edges: START -> parse_resume -> parse_job -> "
-        "match_skills -> generate_recommendations -> END"
-    )
+    compiled: CompiledStateGraph = graph_builder.compile()
+    logger.info("Original resume workflow compiled")
+    return compiled
 
-    compiled_graph: CompiledStateGraph = graph_builder.compile()
 
-    logger.info("Resume Matching Agent workflow graph compiled successfully")
+# ---------------------------------------------------------------------------
+# New per-posting match workflow
+# ---------------------------------------------------------------------------
 
-    return compiled_graph
+def get_match_workflow() -> CompiledStateGraph:
+    """
+    Builds and compiles the per-posting match graph:
+        START -> run_rules_engine -> run_match_explainer -> END
+
+    Callers invoke it with a MatchState containing:
+        parsed_resume        dict  (profile.parsed_data)
+        current_posting      dict  (postings row)
+        current_requirements dict  (requirements.structured_data)
+        errors               list  (pre-initialised to [])
+    """
+    logger.info("Building per-posting match workflow graph")
+
+    graph_builder: StateGraph = StateGraph(MatchState)
+
+    graph_builder.add_node("run_rules_engine", run_rules_engine)
+    graph_builder.add_node("run_match_explainer", run_match_explainer)
+
+    graph_builder.add_edge(START, "run_rules_engine")
+    graph_builder.add_edge("run_rules_engine", "run_match_explainer")
+    graph_builder.add_edge("run_match_explainer", END)
+
+    compiled: CompiledStateGraph = graph_builder.compile()
+    logger.info("Per-posting match workflow compiled")
+    return compiled
+
+
+# ---------------------------------------------------------------------------
+# On-demand drafting workflow (NEVER auto-invoked)
+# ---------------------------------------------------------------------------
+
+def get_drafting_workflow() -> CompiledStateGraph:
+    """
+    Builds and compiles the explicit application-drafting graph:
+        START -> run_drafting_worker -> END
+
+    This graph is ONLY invoked when a user explicitly approves a specific
+    match for form drafting via POST /draft-application. It is deliberately
+    NOT wired into the match sweep so it never fires automatically.
+
+    Callers invoke it with a DraftingState containing:
+        source_url       str   (posting.source_url — Greenhouse form URL)
+        parsed_resume    dict  (profile.parsed_data from MS1)
+        match_reasoning  str   (from match_explainer, for Gemini context)
+        posting          dict  (posting row — title/company for Gemini)
+        drafted_fields   dict  (pre-initialised to {})
+        draft_errors     list  (pre-initialised to [])
+    """
+    logger.info("Building application drafting workflow graph")
+
+    graph_builder: StateGraph = StateGraph(DraftingState)
+
+    graph_builder.add_node("run_drafting_worker", run_drafting_worker)
+
+    graph_builder.add_edge(START, "run_drafting_worker")
+    graph_builder.add_edge("run_drafting_worker", END)
+
+    compiled: CompiledStateGraph = graph_builder.compile()
+    logger.info("Application drafting workflow compiled")
+    return compiled

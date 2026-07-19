@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { upload } from "../middleware/multer";
 import { uploadAndParseResume } from "../controllers/resumeController";
+import { requireAuth } from "../middleware/auth";
 
 const router = Router();
 
@@ -16,6 +17,7 @@ const router = Router();
  */
 router.post(
     "/parse",
+    requireAuth,
     upload.single("resume"),
     uploadAndParseResume
 );

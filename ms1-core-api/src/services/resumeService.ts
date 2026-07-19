@@ -1,4 +1,5 @@
 import axios, { AxiosError } from "axios";
+import { createProfile, Profile } from "../repositories/profileRepository";
 
 /**
  * Base URL of the MS2 Resume Matching Service.
@@ -33,9 +34,11 @@ export interface ParseResumeResponse {
  * Calls the MS2 Resume Matching Agent.
  */
 export async function parseResume(
+    userId: string,
     resume_path: string,
-    job_description: string
-): Promise<ParseResumeResponse> {
+    job_description: string,
+    s3Url?: string
+): Promise<Profile> {
     try {
         const payload: ParseResumeRequest = {
             resume_path,
@@ -53,7 +56,16 @@ export async function parseResume(
             }
         );
 
-        return response.data;
+        const ms2Data = response.data;
+
+        const profile = await createProfile({
+            user_id: userId,
+            resume_url: s3Url || resume_path,
+            parsed_data: ms2Data.parsed_resume,
+            parser_version: "ms2-v1",
+        });
+
+        return profile;
     } catch (error) {
         const err = error as AxiosError;
 

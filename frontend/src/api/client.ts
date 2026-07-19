@@ -43,4 +43,10 @@ export const api = {
     request(path, {
       method: "GET",
     }),
+
+  patch: (path: string, body: unknown) =>
+    request(path, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
 };

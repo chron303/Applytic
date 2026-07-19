@@ -33,3 +33,18 @@ export function requireRole(role: string) {
     next();
   };
 }
+
+export function requireInternalAuth(req: Request, res: Response, next: NextFunction) {
+  const apiKey = req.headers["x-internal-api-key"];
+  const expectedKey = process.env.INTERNAL_API_KEY;
+
+  if (!expectedKey) {
+    return res.status(500).json({ error: "Internal API Key not configured" });
+  }
+
+  if (!apiKey || apiKey !== expectedKey) {
+    return res.status(401).json({ error: "invalid internal API key" });
+  }
+
+  next();
+}

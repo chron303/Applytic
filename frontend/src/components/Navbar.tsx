@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "./ui/Button";
 
 interface NavbarProps {
@@ -18,7 +18,7 @@ export function Navbar({ userEmail }: NavbarProps) {
     <header className="navbar">
       <div className="navbar-inner container">
         {/* Logo */}
-        <a href="/" className="navbar-logo" aria-label="Applytic home">
+        <Link to="/" className="navbar-logo" aria-label="Applytic home">
           <div className="navbar-logo-mark" aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <rect width="20" height="20" rx="5" fill="#09090B" />
@@ -26,17 +26,23 @@ export function Navbar({ userEmail }: NavbarProps) {
             </svg>
           </div>
           <span className="navbar-logo-text">Applytic</span>
-        </a>
+        </Link>
 
         {/* Right side */}
         <div className="navbar-right">
           {userEmail && (
-            <div className="navbar-user">
+            <>
+              <Link to="/" className="navbar-link">Home</Link>
+              <Link to="/matches" className="navbar-link">Matches</Link>
+              <Link to="/review" className="navbar-link">Review Queue</Link>
+              <Link to="/application-status" className="navbar-link">Applications</Link>
+              <div className="navbar-user">
               <div className="navbar-avatar" aria-hidden="true">
                 {userEmail[0].toUpperCase()}
               </div>
               <span className="navbar-email">{userEmail}</span>
             </div>
+            </>
           )}
           <Button variant="ghost" size="sm" onClick={handleLogout}>
             Sign out
@@ -84,7 +90,16 @@ export function Navbar({ userEmail }: NavbarProps) {
         .navbar-right {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          gap: 1.5rem;
+        }
+        .navbar-link {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: var(--color-text);
+          text-decoration: none;
+        }
+        .navbar-link:hover {
+          color: var(--color-primary);
         }
         .navbar-user {
           display: flex;

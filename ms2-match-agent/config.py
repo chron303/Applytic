@@ -17,6 +17,10 @@ load_dotenv()
 GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
 
+# MS1 internal API
+MS1_INTERNAL_URL: str = os.getenv("MS1_INTERNAL_URL", "http://ms1:3000")
+INTERNAL_API_KEY: str = os.getenv("INTERNAL_API_KEY", "")
+
 
 def require_gemini_api_key() -> str:
     """

@@ -12,6 +12,11 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // OTP step state
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -21,9 +26,9 @@ function Login() {
     try {
       if (isSignup) {
         await api.post("/auth/signup", { email, password });
-        setSuccess("Account created! You can now sign in.");
-        setIsSignup(false);
-        setEmail("");
+        // Switch to OTP step
+        setOtpEmail(email);
+        setOtpStep(true);
         setPassword("");
         return;
       }
@@ -32,6 +37,26 @@ function Login() {
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("refreshToken", data.refreshToken);
       navigate("/");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+
+    try {
+      await api.post("/auth/verify-otp", { email: otpEmail, code: otpCode });
+      setOtpStep(false);
+      setIsSignup(false);
+      setEmail(otpEmail);
+      setOtpCode("");
+      setSuccess("Email verified! You can now sign in.");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -58,91 +83,155 @@ function Login() {
 
         {/* Card */}
         <div className="login-card">
-          <div className="login-card-header">
-            <h1 className="login-title">{isSignup ? "Create an account" : "Welcome back"}</h1>
-            <p className="login-subtitle">
-              {isSignup
-                ? "Start analyzing resumes with AI-powered intelligence."
-                : "Sign in to your Applytic workspace."}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="login-form" noValidate>
-            <div className="login-field">
-              <label htmlFor="email">Email address</label>
-              <input
-                id="email"
-                type="email"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                autoFocus
-              />
-            </div>
-
-            <div className="login-field">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete={isSignup ? "new-password" : "current-password"}
-              />
-            </div>
-
-            {error && (
-              <div className="login-alert login-alert-error" role="alert">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M8 5v3M8 10.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                {error}
+          {otpStep ? (
+            <>
+              <div className="login-card-header">
+                <h1 className="login-title">Check your email</h1>
+                <p className="login-subtitle">
+                  We sent a 6-digit code to <strong>{otpEmail}</strong>. Enter it below to verify your account.
+                </p>
               </div>
-            )}
 
-            {success && (
-              <div className="login-alert login-alert-success" role="status">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M5 8l2.5 2.5L11 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {success}
+              <form onSubmit={handleVerifyOtp} className="login-form" noValidate>
+                <div className="login-field">
+                  <label htmlFor="otp-code">Verification code</label>
+                  <input
+                    id="otp-code"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="123456"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    maxLength={6}
+                    required
+                    autoFocus
+                    style={{ letterSpacing: "0.3em", fontSize: "1.25rem", textAlign: "center" }}
+                  />
+                </div>
+
+                {error && (
+                  <div className="login-alert login-alert-error" role="alert">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                      <path d="M8 5v3M8 10.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                    {error}
+                  </div>
+                )}
+
+                <Button type="submit" fullWidth loading={loading} size="lg">
+                  Verify Email
+                </Button>
+              </form>
+
+              <div className="login-divider">
+                <span />
+                <p>Wrong email?</p>
+                <span />
               </div>
-            )}
 
-            <Button
-              type="submit"
-              fullWidth
-              loading={loading}
-              size="lg"
-            >
-              {isSignup ? "Create account" : "Sign in"}
-            </Button>
-          </form>
+              <button
+                type="button"
+                className="login-toggle"
+                onClick={() => {
+                  setOtpStep(false);
+                  setIsSignup(true);
+                  setError(null);
+                }}
+              >
+                Go back to sign up
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="login-card-header">
+                <h1 className="login-title">{isSignup ? "Create an account" : "Welcome back"}</h1>
+                <p className="login-subtitle">
+                  {isSignup
+                    ? "Start analyzing resumes with AI-powered intelligence."
+                    : "Sign in to your Applytic workspace."}
+                </p>
+              </div>
 
-          <div className="login-divider">
-            <span />
-            <p>{isSignup ? "Already have an account?" : "Don't have an account?"}</p>
-            <span />
-          </div>
+              <form onSubmit={handleSubmit} className="login-form" noValidate>
+                <div className="login-field">
+                  <label htmlFor="email">Email address</label>
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    autoFocus
+                  />
+                </div>
 
-          <button
-            type="button"
-            className="login-toggle"
-            onClick={() => {
-              setIsSignup(!isSignup);
-              setError(null);
-              setSuccess(null);
-            }}
-          >
-            {isSignup ? "Sign in instead" : "Create an account"}
-          </button>
+                <div className="login-field">
+                  <label htmlFor="password">Password</label>
+                  <input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete={isSignup ? "new-password" : "current-password"}
+                  />
+                </div>
+
+                {error && (
+                  <div className="login-alert login-alert-error" role="alert">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                      <path d="M8 5v3M8 10.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                    {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="login-alert login-alert-success" role="status">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                      <path d="M5 8l2.5 2.5L11 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {success}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  loading={loading}
+                  size="lg"
+                >
+                  {isSignup ? "Create account" : "Sign in"}
+                </Button>
+              </form>
+
+              <div className="login-divider">
+                <span />
+                <p>{isSignup ? "Already have an account?" : "Don't have an account?"}</p>
+                <span />
+              </div>
+
+              <button
+                type="button"
+                className="login-toggle"
+                onClick={() => {
+                  setIsSignup(!isSignup);
+                  setError(null);
+                  setSuccess(null);
+                }}
+              >
+                {isSignup ? "Sign in instead" : "Create an account"}
+              </button>
+            </>
+          )}
         </div>
+
 
         <p className="login-footer">
           Secure. Private. Enterprise-ready.

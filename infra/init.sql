@@ -16,6 +16,9 @@ CREATE TABLE users (
   email VARCHAR UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   role role NOT NULL DEFAULT 'user',
+  verification_token TEXT,
+verification_token_expires_at TIMESTAMP,
+email_verified BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT now(),
   updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
@@ -116,3 +119,12 @@ CREATE TABLE stage_history (
 );
 
 CREATE INDEX idx_stage_history_application_id ON stage_history(application_id);
+
+-- otp_codes (for email verification)
+CREATE TABLE IF NOT EXISTS otp_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code VARCHAR(6) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT now()
+);

@@ -3,8 +3,16 @@ import dotenv from "dotenv";
 import { pool } from "./db";
 import authRouter from "./routes/auth";
 import resumeRouter from "./routes/resume";
+import profilesRouter from "./routes/profiles";
+import postingsRouter from "./routes/postings";
+import requirementsRouter from "./routes/requirements";
+import matchesRouter from "./routes/matches";
+import applicationsRouter from "./routes/applications";
+import stageHistoriesRouter from "./routes/stageHistories";
+import internalRouter from "./routes/internal";
+import draftRouter from "./routes/draft";
 import { requireAuth, requireRole, AuthenticatedRequest } from "./middleware/auth";
-
+import testEmailRouter from "./routes/testEmail";
 dotenv.config();
 
 const app = express();
@@ -13,6 +21,15 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use("/auth", authRouter);
 app.use("/resume", resumeRouter);
+app.use("/profiles", profilesRouter);
+app.use("/postings", postingsRouter);
+app.use("/requirements", requirementsRouter);
+app.use("/matches", matchesRouter);
+app.use("/applications", applicationsRouter);
+app.use("/draft-application", draftRouter);
+app.use("/stage-histories", stageHistoriesRouter);
+app.use("/internal", internalRouter);
+app.use("/test-email", testEmailRouter);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });

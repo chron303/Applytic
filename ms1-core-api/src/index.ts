@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import dotenv from "dotenv";
 import { pool } from "./db";
 import authRouter from "./routes/auth";
@@ -11,11 +12,13 @@ import applicationsRouter from "./routes/applications";
 import stageHistoriesRouter from "./routes/stageHistories";
 import internalRouter from "./routes/internal";
 import draftRouter from "./routes/draft";
+import dashboardRouter from "./routes/dashboard";
 import { requireAuth, requireRole, AuthenticatedRequest } from "./middleware/auth";
 import testEmailRouter from "./routes/testEmail";
 dotenv.config();
 
 const app = express();
+app.use(cors({ origin: "*" }));
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -29,6 +32,7 @@ app.use("/applications", applicationsRouter);
 app.use("/draft-application", draftRouter);
 app.use("/stage-histories", stageHistoriesRouter);
 app.use("/internal", internalRouter);
+app.use("/dashboard", dashboardRouter);
 app.use("/test-email", testEmailRouter);
 
 app.get("/health", (req, res) => {

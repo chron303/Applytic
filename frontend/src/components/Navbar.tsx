@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "./ui/Button";
 
@@ -7,6 +8,7 @@ interface NavbarProps {
 
 export function Navbar({ userEmail }: NavbarProps) {
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   function handleLogout() {
     localStorage.removeItem("accessToken");
@@ -14,11 +16,15 @@ export function Navbar({ userEmail }: NavbarProps) {
     navigate("/login");
   }
 
+  function closeMobileMenu() {
+    setIsMobileMenuOpen(false);
+  }
+
   return (
     <header className="navbar">
       <div className="navbar-inner container">
         {/* Logo */}
-        <Link to="/" className="navbar-logo" aria-label="Applytic home">
+        <Link to="/" className="navbar-logo" aria-label="Applytic home" onClick={closeMobileMenu}>
           <div className="navbar-logo-mark" aria-hidden="true">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <rect width="20" height="20" rx="5" fill="#09090B" />
@@ -28,23 +34,44 @@ export function Navbar({ userEmail }: NavbarProps) {
           <span className="navbar-logo-text">Applytic</span>
         </Link>
 
+        {/* Mobile Toggle */}
+        <button 
+          className="navbar-mobile-toggle"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+        >
+          {isMobileMenuOpen ? (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          ) : (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          )}
+        </button>
+
         {/* Right side */}
-        <div className="navbar-right">
+        <div className={`navbar-right ${isMobileMenuOpen ? "open" : ""}`}>
           {userEmail && (
             <>
-              <Link to="/" className="navbar-link">Home</Link>
-              <Link to="/matches" className="navbar-link">Matches</Link>
-              <Link to="/review" className="navbar-link">Review Queue</Link>
-              <Link to="/application-status" className="navbar-link">Applications</Link>
+              <Link to="/" className="navbar-link" onClick={closeMobileMenu}>Home</Link>
+              <Link to="/dashboard" className="navbar-link" onClick={closeMobileMenu}>Dashboard</Link>
+              <Link to="/matches" className="navbar-link" onClick={closeMobileMenu}>Matches</Link>
+              <Link to="/review" className="navbar-link" onClick={closeMobileMenu}>Review Queue</Link>
+              <Link to="/application-status" className="navbar-link" onClick={closeMobileMenu}>Applications</Link>
               <div className="navbar-user">
-              <div className="navbar-avatar" aria-hidden="true">
-                {userEmail[0].toUpperCase()}
+                <div className="navbar-avatar" aria-hidden="true">
+                  {userEmail[0].toUpperCase()}
+                </div>
+                <span className="navbar-email">{userEmail}</span>
               </div>
-              <span className="navbar-email">{userEmail}</span>
-            </div>
             </>
           )}
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
+          <Button variant="ghost" size="sm" onClick={() => { handleLogout(); closeMobileMenu(); }}>
             Sign out
           </Button>
         </div>
@@ -87,6 +114,14 @@ export function Navbar({ userEmail }: NavbarProps) {
           color: var(--color-text);
           letter-spacing: -0.03em;
         }
+        .navbar-mobile-toggle {
+          display: none;
+          background: none;
+          border: none;
+          color: var(--color-text);
+          cursor: pointer;
+          padding: 0.25rem;
+        }
         .navbar-right {
           display: flex;
           align-items: center;
@@ -127,8 +162,42 @@ export function Navbar({ userEmail }: NavbarProps) {
           text-overflow: ellipsis;
           white-space: nowrap;
         }
-        @media (max-width: 640px) {
-          .navbar-email { display: none; }
+        
+        @media (max-width: 768px) {
+          .navbar-mobile-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .navbar-right {
+            display: none;
+            position: absolute;
+            top: 56px;
+            left: 0;
+            right: 0;
+            background: var(--color-surface);
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 1.5rem;
+            gap: 1rem;
+            border-bottom: 1px solid var(--color-border);
+            box-shadow: var(--shadow-sm);
+          }
+          .navbar-right.open {
+            display: flex;
+          }
+          .navbar-link {
+            width: 100%;
+            padding: 0.5rem 0;
+          }
+          .navbar-user {
+            width: 100%;
+            padding: 0.5rem 0;
+          }
+          .navbar-right button {
+            width: 100%;
+            margin-top: 0.5rem;
+          }
         }
       `}</style>
     </header>

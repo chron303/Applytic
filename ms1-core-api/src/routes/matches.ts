@@ -1,19 +1,20 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, AuthenticatedRequest } from "../middleware/auth";
 import {
   createMatch,
   getMatchById,
   updateMatch,
   listMatches,
+  getMatchesByUserId,
 } from "../repositories/matchRepository";
 
 const router = Router();
 
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = parseInt(req.query.offset as string) || 0;
-    const matches = await listMatches(limit, offset);
+    const matches = await getMatchesByUserId(req.user!.userId, limit, offset);
     res.json(matches);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });

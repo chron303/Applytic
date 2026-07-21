@@ -108,6 +108,12 @@ export function CardHeader({ title, subtitle, icon, action }: CardHeaderProps) {
         .card-header-action {
           flex-shrink: 0;
         }
+        @media (max-width: 640px) {
+          .card-header {
+            flex-direction: column;
+            gap: 0.75rem;
+          }
+        }
       `}</style>
     </div>
   );

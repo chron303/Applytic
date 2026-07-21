@@ -4,6 +4,7 @@ import type { Application } from "../api/applications";
 import { getMatches, getPostings } from "../api/matches";
 import type { Match, Posting } from "../api/matches";
 import { Card, CardHeader } from "../components/ui/Card";
+import { getErrorMessage } from "../api/errorMessages";
 
 export default function ApplicationStatus() {
   const [applications, setApplications] = useState<Application[]>([]);
@@ -35,7 +36,7 @@ export default function ApplicationStatus() {
         setPostingsMap(pMap);
         
       } catch (err: any) {
-        setError(err.message || "Failed to load applications");
+        setError(getErrorMessage(err));
       } finally {
         setLoading(false);
       }

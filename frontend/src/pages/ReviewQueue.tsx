@@ -5,6 +5,7 @@ import { getMatches, getPostings } from "../api/matches";
 import type { Match, Posting } from "../api/matches";
 import { Button } from "../components/ui/Button";
 import { Card, CardHeader } from "../components/ui/Card";
+import { getErrorMessage } from "../api/errorMessages";
 
 export default function ReviewQueue() {
   const [applications, setApplications] = useState<Application[]>([]);
@@ -43,7 +44,7 @@ export default function ReviewQueue() {
       setPostingsMap(pMap);
       
     } catch (err: any) {
-      setError(err.message || "Failed to load review queue");
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -71,7 +72,7 @@ export default function ReviewQueue() {
       setEditingAppId(null);
       await fetchData(); // reload to get updated data
     } catch (err: any) {
-      alert("Failed to save: " + err.message);
+      alert("Failed to save: " + getErrorMessage(err));
     } finally {
       setSubmitting(null);
     }
@@ -89,7 +90,7 @@ export default function ReviewQueue() {
       setApplications(prev => prev.filter(a => a.id !== appId));
       alert("Application submitted successfully!");
     } catch (err: any) {
-      alert("Failed to approve: " + err.message);
+      alert("Failed to approve: " + getErrorMessage(err));
     } finally {
       setSubmitting(null);
     }
@@ -298,6 +299,20 @@ export default function ReviewQueue() {
           justify-content: flex-end;
           gap: 1rem;
           margin-top: 1.5rem;
+        }
+        @media (max-width: 640px) {
+          .field-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+          }
+          .action-buttons {
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+          .action-buttons button {
+            width: 100%;
+          }
         }
       `}</style>
     </div>

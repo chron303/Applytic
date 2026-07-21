@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
+import { getErrorMessage } from "../api/errorMessages";
 import { Button } from "../components/ui/Button";
 
 function Login() {
@@ -38,7 +39,7 @@ function Login() {
       localStorage.setItem("refreshToken", data.refreshToken);
       navigate("/");
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,7 @@ function Login() {
       setOtpCode("");
       setSuccess("Email verified! You can now sign in.");
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

@@ -6,6 +6,7 @@ import { Button } from "../components/ui/Button";
 import { uploadResume } from "../api/resume";
 import { matchProfile } from "../api/matches";
 import { getProfile } from "../api/profiles";
+import { getErrorMessage } from "../api/errorMessages";
 
 function Home() {
   const navigate = useNavigate();
@@ -58,8 +59,7 @@ function Home() {
       }
       navigate("/matches");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError("Analysis failed: " + msg);
+      setError("Analysis failed: " + getErrorMessage(err));
     } finally {
       setLoading(false);
     }

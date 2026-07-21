@@ -16,6 +16,7 @@ Run with:
 """
 import logging
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from routes.resume_routes import router as resume_router
 
 logging.basicConfig(
@@ -27,6 +28,14 @@ app = FastAPI(
     title="Applytic MS2 Resume Matching Service",
     version="1.0.0",
     description="LangGraph-powered Resume Parsing and Job Matching API.",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(resume_router)

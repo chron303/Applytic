@@ -1,3 +1,5 @@
+import { ApiError } from "./errorMessages";
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 const AGENT_BASE_URL = import.meta.env.VITE_AGENT_BASE_URL || "/agent";
 
@@ -24,10 +26,18 @@ async function request(path: string, options: RequestInit = {}) {
     headers,
   });
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch (err) {
+    if (!response.ok) {
+      throw new ApiError(response.status, "Request failed");
+    }
+    throw err;
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || data.error || "Request failed");
+    throw new ApiError(response.status, data?.message || data?.error || "Request failed");
   }
 
   return data;
@@ -50,10 +60,18 @@ async function agentRequest(path: string, options: RequestInit = {}) {
     headers,
   });
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch (err) {
+    if (!response.ok) {
+      throw new ApiError(response.status, "Request failed");
+    }
+    throw err;
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || data.error || "Request failed");
+    throw new ApiError(response.status, data?.message || data?.error || "Request failed");
   }
 
   return data;

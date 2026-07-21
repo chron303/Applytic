@@ -25,31 +25,38 @@ export async function getMatchById(id: string): Promise<Match | null> {
   const result = await pool.query(`SELECT * FROM matches WHERE id = $1`, [id]);
   return result.rows[0] || null;
 }
+export async function getMatchesByUserId(userId: string, limit: number, offset: number) {
+  const result = await pool.query(
+    `SELECT * FROM matches WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+    [userId, limit, offset]
+  );
+  return result.rows;
+}
 
 export async function updateMatch(id: string, updates: Partial<Match>): Promise<Match | null> {
   const setClause = [];
   const values: any[] = [];
   let index = 1;
   for (const [key, value] of Object.entries(updates)) {
-      if (key !== 'id' && key !== 'created_at') {
-          setClause.push(`${key} = $${index}`);
-          values.push(value);
-          index++;
-      }
+    if (key !== 'id' && key !== 'created_at') {
+      setClause.push(`${key} = $${index}`);
+      values.push(value);
+      index++;
+    }
   }
-  
-  if (setClause.length === 0) { 
-      return getMatchById(id);
+
+  if (setClause.length === 0) {
+    return getMatchById(id);
   }
 
   values.push(id);
   const query = `UPDATE matches SET ${setClause.join(', ')} WHERE id = $${index} RETURNING *`;
-  
+
   const result = await pool.query(query, values);
   return result.rows[0] || null;
 }
 
 export async function listMatches(limit: number = 10, offset: number = 0): Promise<Match[]> {
-    const result = await pool.query(`SELECT * FROM matches ORDER BY created_at DESC LIMIT $1 OFFSET $2`, [limit, offset]);
-    return result.rows;
+  const result = await pool.query(`SELECT * FROM matches ORDER BY created_at DESC LIMIT $1 OFFSET $2`, [limit, offset]);
+  return result.rows;
 }

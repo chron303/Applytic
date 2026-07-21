@@ -4,6 +4,7 @@ import { getMatches, getPostings } from "../api/matches";
 import type { Match, Posting } from "../api/matches";
 import { draftApplication } from "../api/applications";
 import { Button } from "../components/ui/Button";
+import { getErrorMessage } from "../api/errorMessages";
 
 export default function Matches() {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export default function Matches() {
       await draftApplication(matchId);
       navigate("/review");
     } catch (err: any) {
-      alert("Failed to draft application: " + err.message);
+      alert("Failed to draft application: " + getErrorMessage(err));
     } finally {
       setDraftingId(null);
     }
@@ -43,7 +44,7 @@ export default function Matches() {
         }
         setPostingsMap(map);
       } catch (err: any) {
-        setError(err.message || "Failed to load matches");
+        setError(getErrorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -198,6 +199,12 @@ export default function Matches() {
         }
         .match-reasoning {
           margin: 0;
+        }
+        @media (max-width: 640px) {
+          .match-header {
+            flex-direction: column;
+            gap: 0.75rem;
+          }
         }
       `}</style>
     </div>

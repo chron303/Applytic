@@ -87,7 +87,18 @@ export default function Matches() {
       <div className="matches-list">
         {matches.map((match) => {
           const posting = postingsMap[match.posting_id];
-          const badgeClass = `badge badge-${match.match_result}`;
+          
+          let displayBadge = match.match_result.toUpperCase();
+          let badgeClass = `badge badge-${match.match_result}`;
+
+          if (match.application_status === 'submitted') {
+            displayBadge = "APPLIED";
+            badgeClass = "badge badge-applied";
+          } else if (match.application_status === 'drafted' || match.application_status === 'reviewed') {
+            displayBadge = "DRAFTED";
+            badgeClass = "badge badge-drafted";
+          }
+
           return (
             <div key={match.id} className="match-card">
               <div className="match-header">
@@ -96,13 +107,13 @@ export default function Matches() {
                   <p className="match-company">{posting?.company || "Unknown Company"}</p>
                 </div>
                 <span className={badgeClass}>
-                  {match.match_result.toUpperCase()}
+                  {displayBadge}
                 </span>
               </div>
               <div className="match-body">
                 <p className="match-reasoning">{match.reasoning || "No reasoning provided."}</p>
               </div>
-              {match.match_result === 'apply' && (
+              {match.match_result === 'apply' && !match.application_status && (
                 <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
                   <Button 
                     onClick={() => handleDraft(match.id)}
@@ -191,6 +202,14 @@ export default function Matches() {
         .badge-skip {
           background: #f3f4f6;
           color: #374151;
+        }
+        .badge-applied {
+          background: #dbeafe;
+          color: #1e40af;
+        }
+        .badge-drafted {
+          background: #f3e8ff;
+          color: #6b21a8;
         }
         .match-body {
           font-size: 0.9375rem;

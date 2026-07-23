@@ -8,6 +8,7 @@ export interface Match {
   match_result: 'apply' | 'maybe' | 'skip';
   reasoning?: string;
   created_at: string;
+  application_status?: string | null;
 }
 
 export interface Posting {

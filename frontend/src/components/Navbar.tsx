@@ -3,10 +3,11 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "./ui/Button";
 
 interface NavbarProps {
+  isAuthenticated?: boolean;
   userEmail?: string | null;
 }
 
-export function Navbar({ userEmail }: NavbarProps) {
+export function Navbar({ isAuthenticated, userEmail }: NavbarProps) {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -56,24 +57,26 @@ export function Navbar({ userEmail }: NavbarProps) {
 
         {/* Right side */}
         <div className={`navbar-right ${isMobileMenuOpen ? "open" : ""}`}>
-          {userEmail && (
+          {isAuthenticated && (
             <>
               <Link to="/" className="navbar-link" onClick={closeMobileMenu}>Home</Link>
               <Link to="/dashboard" className="navbar-link" onClick={closeMobileMenu}>Dashboard</Link>
               <Link to="/matches" className="navbar-link" onClick={closeMobileMenu}>Matches</Link>
               <Link to="/review" className="navbar-link" onClick={closeMobileMenu}>Review Queue</Link>
               <Link to="/application-status" className="navbar-link" onClick={closeMobileMenu}>Applications</Link>
-              <div className="navbar-user">
-                <div className="navbar-avatar" aria-hidden="true">
-                  {userEmail[0].toUpperCase()}
+              {userEmail && (
+                <div className="navbar-user">
+                  <div className="navbar-avatar" aria-hidden="true">
+                    {userEmail.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="navbar-email">{userEmail}</span>
                 </div>
-                <span className="navbar-email">{userEmail}</span>
-              </div>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => { handleLogout(); closeMobileMenu(); }}>
+                Sign out
+              </Button>
             </>
           )}
-          <Button variant="ghost" size="sm" onClick={() => { handleLogout(); closeMobileMenu(); }}>
-            Sign out
-          </Button>
         </div>
       </div>
 

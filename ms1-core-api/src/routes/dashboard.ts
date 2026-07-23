@@ -12,11 +12,11 @@ router.get("/", requireAuth, async (req: AuthenticatedRequest, res) => {
     }
 
     const result = await pool.query(
-      `SELECT a.status, COUNT(*) as count
-       FROM applications a
-       JOIN matches m ON a.match_id = m.id
-       WHERE m.user_id = $1
-       GROUP BY a.status`,
+      `SELECT COALESCE(a.status::text, 'matched') as status, COUNT(*) as count
+       FROM matches m
+       LEFT JOIN applications a ON m.id = a.match_id
+       WHERE m.user_id = $1 AND m.match_result != 'skip'
+       GROUP BY COALESCE(a.status::text, 'matched')`,
       [userId]
     );
 

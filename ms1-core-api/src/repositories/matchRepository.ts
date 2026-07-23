@@ -27,7 +27,12 @@ export async function getMatchById(id: string): Promise<Match | null> {
 }
 export async function getMatchesByUserId(userId: string, limit: number, offset: number) {
   const result = await pool.query(
-    `SELECT * FROM matches WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+    `SELECT m.*, a.status AS application_status 
+     FROM matches m 
+     LEFT JOIN applications a ON m.id = a.match_id 
+     WHERE m.user_id = $1 
+     ORDER BY m.created_at DESC 
+     LIMIT $2 OFFSET $3`,
     [userId, limit, offset]
   );
   return result.rows;

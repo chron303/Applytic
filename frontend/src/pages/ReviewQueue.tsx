@@ -190,6 +190,15 @@ export default function ReviewQueue() {
                   </>
                 ) : (
                   <>
+                    {app.source_url && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => window.open(app.source_url, '_blank')}
+                        disabled={submitting === app.id}
+                      >
+                        Open Job Posting →
+                      </Button>
+                    )}
                     <Button 
                       variant="ghost" 
                       onClick={() => handleEditClick(app)}

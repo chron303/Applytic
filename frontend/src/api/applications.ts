@@ -4,6 +4,9 @@ export interface Application {
   id: string;
   match_id: string;
   drafted_fields?: any;
+  source_url?: string;
+  title?: string;
+  company?: string;
   status: string;
   submitted_at?: string;
   created_at: string;

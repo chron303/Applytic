@@ -19,6 +19,19 @@ router.post("/signup", async (req, res) => {
     });
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({
+      error: "Invalid email format",
+    });
+  }
+
+  if (password.length < 8 || password.length > 128) {
+    return res.status(400).json({
+      error: "Password must be between 8 and 128 characters",
+    });
+  }
+
   try {
     // Check if email already exists
     const existing = await pool.query(

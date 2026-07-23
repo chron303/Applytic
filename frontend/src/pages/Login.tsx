@@ -22,6 +22,19 @@ function Login() {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+
+    if (isSignup) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setError("Invalid email format");
+        return;
+      }
+      if (password.length < 8 || password.length > 128) {
+        setError("Password must be between 8 and 128 characters");
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {

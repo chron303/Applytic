@@ -21,8 +21,14 @@ export async function createApplication(application: Partial<Application>): Prom
   return result.rows[0];
 }
 
-export async function getApplicationById(id: string): Promise<Application | null> {
-  const result = await pool.query(`SELECT * FROM applications WHERE id = $1`, [id]);
+export async function getApplicationById(id: string): Promise<(Application & { source_url?: string }) | null> {
+  const result = await pool.query(`
+    SELECT a.*, p.source_url
+    FROM applications a
+    JOIN matches m ON a.match_id = m.id
+    JOIN postings p ON m.posting_id = p.id
+    WHERE a.id = $1
+  `, [id]);
   return result.rows[0] || null;
 }
 
@@ -59,9 +65,10 @@ export async function listApplications(
   offset: number = 0
 ): Promise<Application[]> {
   let query = `
-    SELECT a.* 
+    SELECT a.*, p.source_url, p.title, p.company 
     FROM applications a
     JOIN matches m ON a.match_id = m.id
+    JOIN postings p ON m.posting_id = p.id
     WHERE m.user_id = $1
   `;
   const params: any[] = [userId];
